@@ -19,6 +19,13 @@ Represent a move as a tuple (from pole, to pole) - zero indexed
 (0,1)
 [(2,3),(1,1),(6,9),,(5,6),,,(4 4)]
 """
+from collections import namedtuple
+
+history = []
+
+Move = namedtuple(
+    "Move", ["move", "state"]
+)
 
 
 class Pole:
@@ -67,6 +74,9 @@ class Pole:
     def __repr__(self):
         return str(self)
 
+    def as_tuple(self):
+        return self._top_ring, self._bottom_ring
+
 
 class HanoiVar:
 
@@ -89,8 +99,20 @@ class HanoiVar:
     def __str__(self):
         return " ".join(str(pole) for pole in self.state)
 
+    def get_state(self):
+        state = []
+        for pole in self.state:
+            if pole.size() > 0:
+                state.append(pole.as_tuple())
+            else:
+                state.append(None)
+        return state
+
     def move(self, from_pole_idx: int, to_pole_idx: int):
         """Move a ring from -> to pole using a pop and push"""
+        move = Move((from_pole_idx, to_pole_idx), self.get_state())
+        history.append(move)
+
         from_pole: Pole = self.state[from_pole_idx]
         to_pole: Pole = self.state[to_pole_idx]
         ring = from_pole.pop_ring()
@@ -144,7 +166,23 @@ class HanoiVar:
             block_size = block_size // 2
             self.move_block(block_size, 0)
 
+        print("Halfway")
+        reassembly_moves = [(0, 1)]  # move the largest ring
+        for move in reversed(history):
+            # for each move reverse the direction and swap poles 1 & 2
+            to_pole = move.move[0]
+            from_pole = move.move[1]
+            if to_pole <= 1:
+                to_pole = 1 - to_pole
+            if from_pole <= 1:
+                from_pole = 1 - from_pole
+            reassembly_moves.append((from_pole, to_pole))
+
+        # Apply the reassembly to history
+        for move in reassembly_moves:
+            self.move(move[0], move[1])
+
 
 # Example use with 8 poles (127 rings)
-v = HanoiVar(8)
-v.solve()
+# v = HanoiVar(8)
+# v.solve()
